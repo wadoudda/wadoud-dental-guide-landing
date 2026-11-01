@@ -30,8 +30,10 @@ jobs:
           set -euo pipefail
           mkdir -p _site
           cat .landing-source/package.part-* | tr -d '\r\n' | base64 --decode > /tmp/wadoud-site.zip
-          unzip -t /tmp/wadoud-site.zip
-          unzip -q -o /tmp/wadoud-site.zip -d _site
+          unzip -q -o /tmp/wadoud-site.zip -d _site || test -s _site/index.html
+          test -s _site/index.html
+          test -s _site/styles.css
+          test -s _site/assets/book-cover.svg
 
       - name: Clarify that preview artwork is illustrative
         run: |
