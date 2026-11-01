@@ -1,0 +1,63 @@
+name: Deploy WADOUD dental guide landing page
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source chunks
+        uses: actions/checkout@v6
+
+      - name: Rebuild website package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cat .landing-source/package.part-* | tr -d '\r\n' | base64 --decode > /tmp/wadoud-site.zip
+          unzip -t /tmp/wadoud-site.zip
+          unzip -q -o /tmp/wadoud-site.zip -d _site
+
+      - name: Clarify that preview artwork is illustrative
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("_site/index.html")
+          html = p.read_text(encoding="utf-8")
+          html = html.replace(
+              "هذه بعض الصفحات <em>من داخل الدليل.</em>",
+              "رسوم توضيحية <em>لأقسام الدليل.</em>"
+          )
+          html = html.replace(
+              "معاينات من الملف المرفق لتتعرف على شكل المحتوى وطريقة عرضه.",
+              "هذه الرسوم توضيحية للتعريف بأقسام الدليل، وليست صورًا حرفية لصفحات ملف PDF."
+          )
+          p.write_text(html, encoding="utf-8")
+          PY
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload website artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
